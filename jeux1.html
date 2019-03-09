@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Momentum invaders</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <canvas id="canvas" width="1280" height="700"></canvas>
+  </body>
+
+  <script>
+    var img = new Image();
+    img.src = "img/background.png";
+    var canvas = document.getElementById("canvas");
+    var ctx = canvas.getContext("2d");
+
+    var backgroundImage = {
+      img: img,
+      x: 0,
+      y: 0,
+      speed: -1,
+
+      move: function() {
+        this.y += this.speed;
+        this.y %= this.img.height;
+      },
+
+      draw: function() {
+        ctx.drawImage(this.img, 0, this.y);
+        if (this.speed < 0) {
+          ctx.drawImage(this.img, 0, this.y + canvas.height);
+        } else {
+          ctx.drawImage(this.img, 0, this.y - this.img.height);
+        }
+      }
+    };
+    var myGameArea = {
+      frame: 0,
+      canvas: document.getElementById("canvas"),
+      start: function() {
+        this.context = this.canvas.getContext("2d");
+        this.player1 = new Component(40, 40, "red", 700, 630);
+        this.monster_list = [];
+
+        for (var i = 0; i < 10; i++) {
+          for (var j = 0; j < 20; j++) {
+            this.monster_list.push(
+              new Monster(10, 10, "white", j * 20, -i * 40)
+            );
+          }
+        }
+
+        this.missile_list = [];
+        this.missilemonster_list = [];
+
+        this.interval = setInterval(this.updateCanvas.bind(this), 10);
+
+        document.onkeydown = e => {
+          switch (e.keyCode) {
+            case 38:
+              this.player1.moveUp();
+              break;
+            case 40:
+              this.player1.moveDown();
+              break;
+            case 37:
+              this.player1.moveLeft();
+              break;
+            case 39:
+              this.player1.moveRight();
+              break;
+            case 32:
+              this.missile_list.push(
+                new Missile(
+                  this.player1.x + 16,
+                  this.player1.y,
+                  0,
+                  3,
+                  "red",
+                  this.context
+                )
+              );
+              break;
+            case 65:
+              this.missile_list.push(
+                new Missile(
+                  this.player1.x,
+                  this.player1.y,
+                  -2,
+                  3,
+                  "green",
+                  this.context
+                )
+              );
+              break;
+            case 90:
+              this.missile_list.push(
+                new Missile(
+                  this.player1.x + 36,
+                  this.player1.y,
+                  2,
+                  3,
+                  "blue",
+                  this.context
+                )
+              );
+              break;
+          }
+        };
+      },
+      updateCanvas: function() {
+        this.frame++;
+        this.context.clearRect(0, 0, 1400, 700);
+        backgroundImage.move();
+        backgroundImage.draw();
+        this.player1.draw();
+        this.missilemonster_list.forEach(missile => missile.update());
+        this.missilemonster_list.forEach(missile => missile.draw());
+        this.missile_list.forEach(missile => missile.update());
+        this.missile_list.forEach(missile => missile.draw());
+        for (var i = 0; i < this.monster_list.length; i++) {
+          this.monster_list[i].update();
+          this.monster_list[i].draw();
+          this.missile_list.forEach((x, j) => {
+            var col = x.checkCollision(this.monster_list[i]);
+            if (col) {
+              this.monster_list.splice(i, 1);
+              this.missile_list.splice(j, 1);
+            }
+          });
+        }
+        this.missilemonster_list.forEach(x => {
+          var col2 = x.checkCollision2(this.player1);
+          if (col2) {
+            this.missilemonster_list.splice(x, 1);
+          }
+        });
+      }
+    };
+
+    function Component(width, height, color, x, y) {
+      this.width = width;
+      this.height = height;
+      this.x = x;
+      this.y = y;
+      ctx = myGameArea.context;
+      ctx.fillStyle = color;
+      ctx.fillRect(this.x, this.y, this.width, this.height);
+
+      this.draw = function() {
+        ctx = myGameArea.context;
+        ctx.fillStyle = color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+      };
+
+      this.moveUp = function() {
+        this.y -= 10;
+      };
+
+      this.moveDown = function() {
+        this.y += 10;
+      };
+
+      this.moveLeft = function() {
+        this.x -= 10;
+      };
+
+      this.moveRight = function() {
+        this.x += 10;
+      };
+    }
+
+    function Monster(width, height, color, x, y) {
+      this.width = width;
+      this.height = height;
+      this.x = x;
+      this.y = y;
+      this.speed = 1;
+      ctx = myGameArea.context;
+      ctx.fillStyle = color;
+      ctx.fillRect(this.x, this.y, this.width, this.height);
+
+      this.update = function() {
+        if (myGameArea.frame % 60 == 10) {
+          if (Math.random() < 0.1 && this.y >= 0) {
+            myGameArea.missilemonster_list.push(
+              new MissileMonster(this.x, this.y + 10, 0, -1, "blue", ctx)
+            );
+          }
+        }
+        this.x += this.speed;
+        if (this.x == 1280) {
+          this.y += 20;
+          this.speed = -1 * this.speed;
+        }
+        if (this.x == -1) {
+          this.y += 20;
+          this.speed = -1 * this.speed;
+        }
+      };
+
+      this.draw = function() {
+        ctx = myGameArea.context;
+        ctx.fillStyle = color;
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+      };
+    }
+    function MissileMonster(x, y, vx, vy, color, ctx) {
+      this.x = x;
+      this.y = y;
+      this.vx = vx;
+      this.vy = vy;
+      this.color = color;
+
+      this.height = 7;
+      this.width = 7;
+      this.ctx = ctx;
+
+      this.update = function() {
+        this.y -= vy;
+        this.x += vx;
+      };
+      this.draw = function() {
+        this.ctx.fillStyle = this.color;
+        this.ctx.fillRect(this.x, this.y, this.width, this.height);
+      };
+      this.checkCollision2 = function(object) {
+        var miss1x = this.x;
+        var miss1y = this.y;
+        var miss1w = 7;
+        var miss1h = 7;
+
+        var result =
+          miss1x - object.width < object.x &&
+          object.x < miss1x + miss1w &&
+          miss1y - object.height < object.y &&
+          object.y < miss1y + miss1h;
+
+        return result;
+      };
+    }
+    function Missile(x, y, vx, vy, color, ctx) {
+      this.x = x;
+      this.y = y;
+      this.vx = vx;
+      this.vy = vy;
+      this.color = color;
+
+      this.height = 7;
+      this.width = 7;
+      this.ctx = ctx;
+
+      this.update = function() {
+        this.y -= vy;
+        this.x += vx;
+      };
+      this.draw = function() {
+        this.ctx.fillStyle = this.color;
+        this.ctx.fillRect(this.x, this.y, this.width, this.height);
+      };
+      this.checkCollision = function(object) {
+        var miss1x = this.x;
+        var miss1y = this.y;
+        var miss1w = 7;
+        var miss1h = 7;
+
+        var result =
+          miss1x - object.width < object.x &&
+          object.x < miss1x + miss1w &&
+          miss1y - object.height < object.y &&
+          object.y < miss1y + miss1h;
+
+        return result;
+      };
+    }
+
+    myGameArea.start();
+  </script>
+</html>

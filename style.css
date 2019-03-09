@@ -1,0 +1,8 @@
+#background {
+  background-image: url("img/background.png");
+  height: 981px;
+  width: 1280px;
+}
+#hero {
+  background-image: url("img/hero.png");
+}

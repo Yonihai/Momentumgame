@@ -6,3 +6,7 @@
 #hero {
   background-image: url("img/hero.png");
 }
+.Level {
+  display: flex;
+  flex-direction: row;
+}
